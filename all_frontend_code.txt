@@ -1,0 +1,686 @@
+
+// ---- Start of api.js ----
+const API_URL = "http://localhost:8080";
+
+export function getToken() {
+  return localStorage.getItem("token");
+}
+
+function authHeaders() {
+  const token = getToken();
+  console.log("Token:", token ? "exists" : "none");
+  if (token) {
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  }
+  return {
+    "Content-Type": "application/json",
+  };
+}
+
+async function handleResponse(res, path, method) {
+  console.log(`${method} ${path}:`, res.status, res.statusText);
+  
+  if (res.status === 204) {
+    return null;
+  }
+  if (!res.ok) {
+    let msg = `${method} ${path} failed with status ${res.status}`;
+    try {
+      const data = await res.json();
+      console.error("Error response:", data);
+      if (data && data.message) {
+        msg = data.message;
+      }
+    } catch (e) {
+      console.error("No JSON error response");
+    }
+    throw new Error(msg);
+  }
+  try {
+    const data = await res.json();
+    console.log(`${method} ${path} success:`, data);
+    return data;
+  } catch (e) {
+    console.error("No JSON response:", e);
+    return null;
+  }
+}
+
+export async function apiGet(path) {
+  console.log("Calling GET:", path);
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "GET",
+    headers: authHeaders(),
+  });
+  return handleResponse(res, path, "GET");
+}
+
+export async function apiPost(path, body) {
+  console.log("Calling POST:", path, body);
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res, path, "POST");
+}
+
+export async function apiPut(path, body) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res, path, "PUT");
+}
+
+export async function apiDelete(path) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  return handleResponse(res, path, "DELETE");
+}
+
+// ---- End of api.js ----
+
+
+// ---- Start of App.css ----
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ---- End of App.css ----
+
+
+// ---- Start of App.js ----
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
+import ProductsPage from "./pages/ProductsPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import CartPage from "./pages/CartPage";
+import OrdersPage from "./pages/OrdersPage";
+import PaymentPage from "./pages/PaymentPage";
+import { getToken } from "./api";
+
+function ProtectedRoute({ children }) {
+const token = getToken();
+if (!token) {
+return <Navigate to="/login" replace />;
+}
+return children;
+}
+
+function App() {
+const token = getToken();
+
+const handleLogout = () => {
+localStorage.removeItem("token");
+window.location.href = "/login";
+};
+
+return (
+<Router>
+<div>
+<nav
+style={{
+display: "flex",
+gap: "1rem",
+padding: "1rem",
+borderBottom: "1px solid #ccc",
+}}
+>
+<Link to="/">Products</Link>
+{token && <Link to="/cart">Cart</Link>}
+{token && <Link to="/orders">Orders</Link>}
+{!token && <Link to="/login">Login</Link>}
+{!token && <Link to="/register">Register</Link>}
+{token && (
+<button onClick={handleLogout}>Logout</button>
+)}
+</nav>
+<div style={{ padding: "1rem" }}>
+<Routes>
+<Route path="/" element={<ProductsPage />} />
+<Route path="/login" element={<LoginPage />} />
+<Route path="/register" element={<RegisterPage />} />
+<Route
+path="/cart"
+element={
+<ProtectedRoute>
+<CartPage />
+</ProtectedRoute>
+}
+/>
+<Route
+path="/orders"
+element={
+<ProtectedRoute>
+<OrdersPage />
+</ProtectedRoute>
+}
+/>
+<Route
+path="/payment"
+element={
+<ProtectedRoute>
+<PaymentPage />
+</ProtectedRoute>
+}
+/>
+</Routes>
+</div>
+</div>
+</Router>
+);
+}
+
+export default App;
+// ---- End of App.js ----
+
+
+// ---- Start of App.test.js ----
+import { render, screen } from '@testing-library/react';
+import App from './App';
+
+test('renders learn react link', () => {
+  render(<App />);
+  const linkElement = screen.getByText(/learn react/i);
+  expect(linkElement).toBeInTheDocument();
+});
+
+// ---- End of App.test.js ----
+
+
+// ---- Start of index.css ----
+body {
+margin: 0;
+font-family: Arial, sans-serif;
+}
+
+a {
+text-decoration: none;
+}
+
+button {
+cursor: pointer;
+}
+// ---- End of index.css ----
+
+
+// ---- Start of index.js ----
+import React from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import App from "./App";
+
+const container = document.getElementById("root");
+const root = createRoot(container);
+
+root.render(
+<React.StrictMode>
+<App />
+</React.StrictMode>
+);
+// ---- End of index.js ----
+
+
+// ---- Start of reportWebVitals.js ----
+const reportWebVitals = onPerfEntry => {
+  if (onPerfEntry && onPerfEntry instanceof Function) {
+    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+      getCLS(onPerfEntry);
+      getFID(onPerfEntry);
+      getFCP(onPerfEntry);
+      getLCP(onPerfEntry);
+      getTTFB(onPerfEntry);
+    });
+  }
+};
+
+export default reportWebVitals;
+
+// ---- End of reportWebVitals.js ----
+
+
+// ---- Start of setupTests.js ----
+// jest-dom adds custom jest matchers for asserting on DOM nodes.
+// allows you to do things like:
+// expect(element).toHaveTextContent(/react/i)
+// learn more: https://github.com/testing-library/jest-dom
+import '@testing-library/jest-dom';
+
+// ---- End of setupTests.js ----
+
+
+// ---- Start of CartPage.js ----
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiGet, apiPut, apiDelete } from "../api";
+
+function CartPage() {
+  const [cart, setCart] = useState(null);
+  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
+
+  const loadCart = () => {
+    apiGet("/cart")
+      .then((data) => {
+        setCart(data);
+      })
+      .catch((err) => {
+        setMessage(err.message || "Failed to load cart");
+      });
+  };
+
+  useEffect(() => {
+    loadCart();
+  }, []);
+
+  const handleUpdateQty = async (itemId, quantity) => {
+    if (quantity < 1) return;
+    try {
+      await apiPut("/cart/update/" + itemId, { quantity });
+      loadCart();
+    } catch (err) {
+      setMessage(err.message || "Failed to update cart item");
+    }
+  };
+
+  const handleRemove = async (itemId) => {
+    try {
+      await apiDelete("/cart/remove/" + itemId);
+      loadCart();
+    } catch (err) {
+      setMessage(err.message || "Failed to remove cart item");
+    }
+  };
+
+  const handleCheckout = () => {
+    navigate("/payment", { state: { total: cart ? cart.totalPrice : 0 } });
+  };
+
+  if (!cart) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div>
+      <h2>Your Cart</h2>
+      {message && <p>{message}</p>}
+      <ul>
+        {cart.cartItems && cart.cartItems.map((ci) => (
+          <li key={ci.id} style={{ marginBottom: "1rem" }}>
+            <div>{ci.product ? ci.product.name : "Product"}</div>
+            <div>Price: ₹{ci.price}</div>
+            <div>
+              Qty:
+              <input
+                type="number"
+                min="1"
+                value={ci.quantity}
+                onChange={(e) =>
+                  handleUpdateQty(ci.id, Number(e.target.value))
+                }
+                style={{ width: "60px", marginLeft: "0.5rem" }}
+              />
+            </div>
+            <button onClick={() => handleRemove(ci.id)}>Remove</button>
+          </li>
+        ))}
+      </ul>
+      <h3>Total: ₹{cart.totalPrice}</h3>
+      <button
+        onClick={handleCheckout}
+        disabled={!cart.cartItems || cart.cartItems.length === 0}
+      >
+        Proceed to Payment
+      </button>
+    </div>
+  );
+}
+
+export default CartPage;
+
+// ---- End of CartPage.js ----
+
+
+// ---- Start of LoginPage.js ----
+import React, { useState } from "react";
+import { apiPost } from "../api";
+
+function LoginPage() {
+const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+const [message, setMessage] = useState("");
+
+const handleSubmit = async (e) => {
+e.preventDefault();
+try {
+const data = await apiPost("/auth/login", { email, password });
+if (!data || !data.token) {
+setMessage((data && data.message) || "Login failed");
+return;
+}
+localStorage.setItem("token", data.token);
+setMessage("Login successful");
+window.location.href = "/";
+} catch (err) {
+setMessage(err.message || "Error logging in");
+}
+};
+
+return (
+<div>
+<h2>Login</h2>
+<form onSubmit={handleSubmit}>
+<div style={{ marginBottom: "0.5rem" }}>
+<label>Email: </label>
+<input
+value={email}
+onChange={(e) => setEmail(e.target.value)}
+/>
+</div>
+<div style={{ marginBottom: "0.5rem" }}>
+<label>Password: </label>
+<input
+type="password"
+value={password}
+onChange={(e) => setPassword(e.target.value)}
+/>
+</div>
+<button type="submit">Login</button>
+</form>
+{message && <p>{message}</p>}
+</div>
+);
+}
+
+export default LoginPage;
+// ---- End of LoginPage.js ----
+
+
+// ---- Start of OrdersPage.js ----
+import React, { useEffect, useState } from "react";
+import { apiGet } from "../api";
+
+function OrdersPage() {
+const [orders, setOrders] = useState([]);
+const [message, setMessage] = useState("");
+
+useEffect(() => {
+apiGet("/orders")
+.then((data) => {
+setOrders(data || []);
+})
+.catch((err) => {
+setMessage(err.message || "Failed to load orders");
+});
+}, []);
+
+return (
+<div>
+<h2>Your Orders</h2>
+{message && <p>{message}</p>}
+<ul>
+{orders.map((o) => (
+<li key={o.id} style={{ marginBottom: "1rem" }}>
+<div>Order #{o.id}</div>
+<div>Status: {o.status}</div>
+<div>Total: ₹{o.totalAmount}</div>
+</li>
+))}
+</ul>
+</div>
+);
+}
+
+export default OrdersPage;
+// ---- End of OrdersPage.js ----
+
+
+// ---- Start of PaymentPage.js ----
+import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
+import { apiPost } from "../api";
+
+function PaymentPage() {
+  const location = useLocation();
+  const total = location.state ? location.state.total : 0;
+  const [addressId, setAddressId] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handlePay = async () => {
+    if (!addressId) {
+      setMessage("Please enter address ID");
+      return;
+    }
+    try {
+      const data = await apiPost("/orders/place", {
+        addressId: Number(addressId),
+      });
+      if (!data || !data.id) {
+        setMessage("Failed to place order");
+        return;
+      }
+      setMessage("Order placed successfully with id " + data.id);
+    } catch (err) {
+      setMessage(err.message || "Error placing order");
+    }
+  };
+
+  return (
+    <div>
+      <h2>Payment</h2>
+      <p>Cart total: ₹{total}</p>
+      <p>
+        This is a test payment screen. Later you can integrate a real payment gateway and call it here.
+      </p>
+      <div style={{ marginBottom: "0.5rem" }}>
+        <label>Address ID: </label>
+        <input
+          value={addressId}
+          onChange={(e) => setAddressId(e.target.value)}
+        />
+      </div>
+      <button onClick={handlePay}>Pay and Place Order</button>
+      {message && <p>{message}</p>}
+    </div>
+  );
+}
+
+export default PaymentPage;
+
+// ---- End of PaymentPage.js ----
+
+
+// ---- Start of ProductsPage.js ----
+import React, { useEffect, useState } from "react";
+import { apiGet, apiPost, getToken } from "../api";
+
+function ProductsPage() {
+  const [products, setProducts] = useState([]);
+  const [message, setMessage] = useState("Loading products...");
+
+  useEffect(() => {
+    // Test 1: Direct fetch (no auth needed for products)
+    fetch("http://localhost:8080/products")
+      .then(res => {
+        console.log("Direct fetch status:", res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log("Direct fetch data:", data);
+        setProducts(data || []);
+        setMessage(data && data.length > 0 ? "" : "No products found");
+      })
+      .catch(err => {
+        console.error("Direct fetch error:", err);
+        setMessage("Direct fetch failed: " + err.message);
+      });
+
+    // Test 2: Through api.js
+    apiGet("/products")
+      .then(data => {
+        console.log("API.js data:", data);
+      })
+      .catch(err => {
+        console.error("API.js error:", err);
+      });
+  }, []);
+
+  const handleAddToCart = async (productId) => {
+    if (!getToken()) {
+      setMessage("Please login to add to cart");
+      return;
+    }
+    try {
+      await apiPost("/cart/add", { productId, quantity: 1 });
+      setMessage("Added to cart");
+    } catch (err) {
+      setMessage("Failed to add to cart: " + err.message);
+    }
+  };
+
+  return (
+    <div>
+      <h2>Products</h2>
+      <p style={{color: message.includes("failed") ? 'red' : 'blue'}}>{message}</p>
+      <ul>
+        {products.map((p) => (
+          <li key={p.id} style={{ marginBottom: "1rem", border: "1px solid #ccc", padding: "1rem" }}>
+            <div><strong>{p.name}</strong></div>
+            <div>{p.description}</div>
+            <div>Price: ₹{p.price}</div>
+            <button onClick={() => handleAddToCart(p.id)}>
+              Add to Cart
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default ProductsPage;
+
+// ---- End of ProductsPage.js ----
+
+
+// ---- Start of RegisterPage.js ----
+import React, { useState } from "react";
+import { apiPost } from "../api";
+
+function RegisterPage() {
+const [name, setName] = useState("");
+const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+const [role, setRole] = useState("CUSTOMER");
+const [message, setMessage] = useState("");
+
+const handleSubmit = async (e) => {
+e.preventDefault();
+try {
+const data = await apiPost("/auth/register", {
+name,
+email,
+password,
+role,
+});
+if (!data || !data.token) {
+setMessage((data && data.message) || "Registration failed");
+return;
+}
+localStorage.setItem("token", data.token);
+setMessage("Registered and logged in");
+window.location.href = "/";
+} catch (err) {
+setMessage(err.message || "Error registering");
+}
+};
+
+return (
+<div>
+<h2>Register</h2>
+<form onSubmit={handleSubmit}>
+<div style={{ marginBottom: "0.5rem" }}>
+<label>Name: </label>
+<input
+value={name}
+onChange={(e) => setName(e.target.value)}
+/>
+</div>
+<div style={{ marginBottom: "0.5rem" }}>
+<label>Email: </label>
+<input
+value={email}
+onChange={(e) => setEmail(e.target.value)}
+/>
+</div>
+<div style={{ marginBottom: "0.5rem" }}>
+<label>Password: </label>
+<input
+type="password"
+value={password}
+onChange={(e) => setPassword(e.target.value)}
+/>
+</div>
+<div style={{ marginBottom: "0.5rem" }}>
+<label>Role: </label>
+<select
+value={role}
+onChange={(e) => setRole(e.target.value)}
+>
+<option value="CUSTOMER">Customer</option>
+<option value="ADMIN">Admin</option>
+</select>
+</div>
+<button type="submit">Register</button>
+</form>
+{message && <p>{message}</p>}
+</div>
+);
+}
+
+export default RegisterPage;
+// ---- End of RegisterPage.js ----
+
